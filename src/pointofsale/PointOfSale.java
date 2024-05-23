@@ -48,7 +48,7 @@ class ListDisplay
     @Override
     public String toString() 
     {
-        return String.format("%-10d %-25s PHP%-10.2f \n", quantity, name, subtotal);
+        return String.format("%-10d %-30s PHP%-20.2f \n", quantity, name, subtotal);
     }
 
     void setQuantity(int newQuantity) 
@@ -86,10 +86,13 @@ class System implements windows
 {
     private Frame frame;
     private Panel panel, foodmenu, drinksmenu, order;
-    private Label label;
+    private Label label, totalLabel;
     private Button cancel, confirm, foods, drinks, report, f1, f2, f3, f4, f5, f6, d1, d2, d3, d4, d5, d6;
     private LinkedList<ListDisplay> orderList = new LinkedList<>();
     private TextArea orderTextArea;
+    private TextField totalField;
+    private JScrollPane orderScroll;
+    private float Total = 0;
     
     System()
     {
@@ -182,10 +185,24 @@ class System implements windows
         panel.add(order);
 
         orderTextArea = new TextArea();
-        orderTextArea.setBounds(10, 10, 290, 480);
         orderTextArea.setEditable(false);
         orderTextArea.setEnabled(false);
-        order.add(orderTextArea);
+        orderScroll = new JScrollPane(orderTextArea);
+        orderScroll.setBounds(10, 10, 290, 400);
+        orderScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        orderScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        order.add(orderScroll);
+        
+        totalLabel = new Label("Total: ");
+        totalLabel.setBounds(10,420,90,30);
+        totalLabel.setFont(new Font("Verdana", Font.BOLD, 30));
+        order.add(totalLabel);
+        
+        totalField = new TextField();
+        totalField.setBounds(100,420,200,30);
+        totalField.setEditable(false);
+        totalField.setEnabled(false);
+        order.add(totalField);
 
         confirm = new Button("Place Order");
         confirm.setPreferredSize(new Dimension(200, 50));
@@ -409,6 +426,8 @@ class System implements windows
             newItem.setOnUpdateCallback(this::updateOrderDisplay);
             orderList.add(newItem);
         }
+        Total = Total + subtotal;
+        totalField.setText(String.valueOf(Total) + "PHP");
         updateOrderDisplay();
     }
     
@@ -490,6 +509,7 @@ class System implements windows
             {
                 Logger.getLogger(System.class.getName()).log(Level.SEVERE, null, ex);
             }
+            JOptionPane.showMessageDialog(null,"Order successful.");
             orderList.clear();
             updateOrderDisplay();
         }
@@ -506,7 +526,8 @@ class SalesReport implements windows
 {
     private Frame frame;
     private Panel panel;
-    private Label label;
+    private Label label, totalLabel;
+    private TextField overallField;
     private JTextArea ordernumArea, itemsArea, totalArea;
     private JScrollPane ordernumScroll, itemsScroll, totalScroll;
     
@@ -527,13 +548,26 @@ class SalesReport implements windows
         label.setFont(new Font("Verdana", Font.BOLD, 40));
         panel.add(label);  
         
+        totalLabel = new Label("Total Sales:");
+        totalLabel.setBounds(310, 50, 90, 30);
+        totalLabel.setForeground(Color.BLACK);
+        totalLabel.setFont(new Font("Verdana", Font.BOLD, 15));
+        panel.add(totalLabel);  
+        
+        overallField = new TextField();
+        overallField.setBounds(400, 50, 130, 30);
+        overallField.setEditable(false);
+        overallField.setEnabled(false);
+        overallField.setFont(new Font("Verdana", Font.BOLD, 20));
+        panel.add(overallField);
+        
         UIManager.put("ScrollPane.border", BorderFactory.createLineBorder(Color.WHITE));
                 
         ordernumArea = new JTextArea();
         ordernumArea.setEditable(false);
         ordernumArea.setEnabled(false);
         ordernumScroll = new JScrollPane(ordernumArea);
-        ordernumScroll.setBounds(0, 50, 150, 750);
+        ordernumScroll.setBounds(0, 80, 150, 620);
         ordernumScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         ordernumScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         panel.add(ordernumScroll);
@@ -542,7 +576,7 @@ class SalesReport implements windows
         itemsArea.setEditable(false);
         itemsArea.setEnabled(false);
         itemsScroll = new JScrollPane(itemsArea);
-        itemsScroll.setBounds(150, 50, 250, 750);
+        itemsScroll.setBounds(150, 80, 250, 620);
         itemsScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         itemsScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         panel.add(itemsScroll);
@@ -551,7 +585,7 @@ class SalesReport implements windows
         totalArea.setEditable(false);
         totalArea.setEnabled(false);
         totalScroll = new JScrollPane(totalArea);
-        totalScroll.setBounds(400, 50, 150, 750);
+        totalScroll.setBounds(400, 80, 150, 620);
         totalScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         totalScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         panel.add(totalScroll);
@@ -573,6 +607,7 @@ class SalesReport implements windows
     private void Report()
     {
         int counter;
+        float overall = 0;
         try 
         {
             Connection connection = DriverManager.getConnection("jdbc:mysql://localhost/salessystem", "root", "1234");
@@ -580,14 +615,15 @@ class SalesReport implements windows
             String ordersQuery = "SELECT orderNum, total FROM orders";
             Statement statement = connection.createStatement();
             ResultSet ordersResult = statement.executeQuery(ordersQuery);
-
+            
             while (ordersResult.next()) 
             {
                 counter = 0;
                 StringBuilder result = new StringBuilder();
                 String orderNum = ordersResult.getString("orderNum");
-                String total = ordersResult.getString("total");
-
+                float total = ordersResult.getFloat("total");
+                overall += total;
+                
                 String itemsQuery = "SELECT itemName, quantity FROM sales WHERE orderNum = ?";
                 PreparedStatement itemsStatement = connection.prepareStatement(itemsQuery);
                 itemsStatement.setString(1, orderNum);
@@ -618,7 +654,8 @@ class SalesReport implements windows
                 salesResult.close();
                 itemsStatement.close();
             }
-
+            
+            overallField.setText(String.valueOf(overall) + "PHP");
             ordersResult.close();
             statement.close();
             connection.close();
