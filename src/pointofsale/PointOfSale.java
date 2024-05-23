@@ -200,6 +200,7 @@ class System implements windows
         
         totalField = new TextField();
         totalField.setBounds(100,420,200,30);
+        totalField.setFont(new Font("Verdana", Font.BOLD, 20));
         totalField.setEditable(false);
         totalField.setEnabled(false);
         order.add(totalField);
@@ -510,6 +511,8 @@ class System implements windows
                 Logger.getLogger(System.class.getName()).log(Level.SEVERE, null, ex);
             }
             JOptionPane.showMessageDialog(null,"Order successful.");
+            Total = 0;
+            totalField.setText("");
             orderList.clear();
             updateOrderDisplay();
         }
@@ -517,6 +520,8 @@ class System implements windows
 
     private void cancel() 
     {
+        Total = 0;
+        totalField.setText("");
         orderList.clear();
         updateOrderDisplay();
     }
